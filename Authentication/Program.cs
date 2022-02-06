@@ -1,28 +1,46 @@
 using IdentityServerAuthentication;
 using IdentityServerAuthentication.Configuration;
+using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json")
+    .Build();
 
-var identitySettings = builder.Configuration.GetSection(nameof(IdentityServerSettings)).Get<IdentityServerSettings>();
-var config = new Config(identitySettings);
-builder.Services
-       .AddIdentityServer()
-       .AddInMemoryClients(config.GetClients())
-       .AddInMemoryIdentityResources(config.IdentityResources)
-       .AddInMemoryApiResources(config.ApiResources)
-       .AddInMemoryApiScopes(config.ApiScopes)
-       .AddTestUsers(config.Users)
-       .AddDeveloperSigningCredential();
+Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(configuration)
+                .CreateLogger();
 
-builder.Services.AddControllersWithViews();
+try
+{
+    Log.Information("Apllication Starting up");
+    var builder = WebApplication.CreateBuilder(args);
 
-var app = builder.Build();
+    builder.Services.ConfigureIdentityServer(builder.Configuration);
 
-app.UseStaticFiles();
-app.UseRouting();
-app.UseIdentityServer();
-app.UseAuthorization();
+    builder.Services.AddControllersWithViews();
 
-app.MapDefaultControllerRoute();
+    var app = builder.Build();
 
-app.Run();
+    var identitySettings = builder.Configuration
+                                  .GetSection(nameof(IdentityServerSettings))
+                                  .Get<IdentityServerSettings>();
+    var config = new Config(identitySettings);
+    app.Services.InitializeDatabase(config);
+
+    app.UseStaticFiles();
+    app.UseRouting();
+    app.UseIdentityServer();
+    app.UseAuthorization();
+
+    app.MapDefaultControllerRoute();
+
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "The application failed to start correctly.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

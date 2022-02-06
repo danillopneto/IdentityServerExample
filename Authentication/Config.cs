@@ -17,7 +17,7 @@ namespace IdentityServerAuthentication
             _identityServerSettings = identityServerSettings ?? throw new ArgumentNullException(nameof(identityServerSettings));
         }
 
-        public List<TestUser> Users
+        public static List<TestUser> Users
         {
             get
             {
