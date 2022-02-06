@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.Options;
-using WeatherMvc.Configuration;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.Options;
 using WeatherMvc.Services;
 
 namespace WeatherMvc.Configuration
@@ -9,11 +10,11 @@ namespace WeatherMvc.Configuration
         public static IServiceCollection ConfigureAuthentication(this IServiceCollection services, IConfiguration configuration) =>
             services.AddAuthentication(options =>
                     {
-                        options.DefaultScheme = "cookie";
-                        options.DefaultChallengeScheme = "oidc";
+                        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
                     })
-                    .AddCookie("cookie")
-                    .AddOpenIdConnect("oidc", options =>
+                    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+                    .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
                     {
                         var interactiveSettings = configuration
                                          .GetSection(nameof(InteractiveServiceSettings))
