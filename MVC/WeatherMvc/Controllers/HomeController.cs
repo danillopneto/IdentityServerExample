@@ -1,4 +1,6 @@
 ﻿using IdentityModel.Client;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -33,7 +35,16 @@ namespace WeatherMvc.Controllers
             return View();
         }
 
-        public IActionResult Logout() => SignOut("cookie", "oidc");
+        public IActionResult Logout()
+        {
+            ClearCookies();
+
+            return new SignOutResult(new[]
+            {
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                OpenIdConnectDefaults.AuthenticationScheme
+            });
+        }
 
         public async Task<IActionResult> Weather()
         {
@@ -56,6 +67,14 @@ namespace WeatherMvc.Controllers
             else
             {
                 throw new Exception("Unable to get content");
+            }
+        }
+
+        private void ClearCookies()
+        {
+            foreach (var cookie in Request.Cookies.Keys)
+            {
+                Response.Cookies.Delete(cookie);
             }
         }
     }

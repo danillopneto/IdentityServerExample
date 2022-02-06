@@ -1,5 +1,4 @@
-﻿using WeatherMvc.Services;
-namespace WeatherMvc.Configuration
+﻿namespace WeatherMvc.Configuration
 {
     public class IdentityServerSettings
     {
