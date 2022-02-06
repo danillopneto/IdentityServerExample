@@ -2,14 +2,22 @@
 using IdentityServer4;
 using IdentityServer4.Models;
 using IdentityServer4.Test;
+using IdentityServerAuthentication.Configuration;
 using System.Security.Claims;
 using System.Text.Json;
 
 namespace IdentityServerAuthentication
 {
-    public static class Config
+    public class Config
     {
-        public static List<TestUser> Users
+        private readonly IdentityServerSettings _identityServerSettings;
+
+        public Config(IdentityServerSettings identityServerSettings)
+        {
+            _identityServerSettings = identityServerSettings ?? throw new ArgumentNullException(nameof(identityServerSettings));
+        }
+
+        public List<TestUser> Users
         {
             get
             {
@@ -63,68 +71,72 @@ namespace IdentityServerAuthentication
             }
         }
 
-        public static IEnumerable<IdentityResource> IdentityResources =>
+        public IEnumerable<IdentityResource> IdentityResources =>
           new[]
           {
-        new IdentityResources.OpenId(),
-        new IdentityResources.Profile(),
-        new IdentityResource
+            new IdentityResources.OpenId(),
+            new IdentityResources.Profile(),
+            new IdentityResource
+            {
+              Name = "role",
+              UserClaims = new List<string> {"role"}
+            }
+          };
+
+        public IEnumerable<ApiScope> ApiScopes => _identityServerSettings.ApiScopes.Select(x => new ApiScope(x));
+
+        public IEnumerable<ApiResource> ApiResources => new[]
         {
-          Name = "role",
-          UserClaims = new List<string> {"role"}
+          new ApiResource("weatherapi")
+          {
+            Scopes = _identityServerSettings.ApiScopes,
+            ApiSecrets = new List<Secret> {new Secret("ScopeSecret".Sha256())},
+            UserClaims = new List<string> {"role"}
+          }
+        };
+
+        public IEnumerable<Client> GetClients()
+        {
+            var interactiveScopes = new List<string>
+            { 
+                IdentityServerConstants.StandardScopes.OpenId,
+                IdentityServerConstants.StandardScopes.Profile
+            };
+            interactiveScopes.AddRange(_identityServerSettings.ApiScopes);
+
+            return new[]
+              {
+                // m2m client credentials flow client
+                new Client
+                {
+                  ClientId = "m2m.client",
+                  ClientName = "Client Credentials Client",
+
+                  AllowedGrantTypes = GrantTypes.ClientCredentials,
+                  ClientSecrets = {new Secret(_identityServerSettings.Secret.Sha256())},
+
+                  AllowedScopes = _identityServerSettings.ApiScopes
+                },
+
+                // interactive client using code flow + pkce
+                new Client
+                {
+                  ClientId = "interactive",
+                  ClientSecrets = {new Secret(_identityServerSettings.Secret.Sha256())},
+
+                  AllowedGrantTypes = GrantTypes.Code,
+
+                  RedirectUris = { _identityServerSettings.RedirectUris },
+                  FrontChannelLogoutUri = _identityServerSettings.FrontChannelLogoutUri,
+                  PostLogoutRedirectUris = { _identityServerSettings.PostLogoutRedirectUris },
+
+                  AllowOfflineAccess = true,
+                  AllowedScopes = interactiveScopes,
+                  RequirePkce = true,
+                  RequireConsent = false,
+                  AllowPlainTextPkce = false
+                }
+              };
         }
-          };
-
-        public static IEnumerable<ApiScope> ApiScopes =>
-          new[]
-          {
-        new ApiScope("weatherapi.read"),
-        new ApiScope("weatherapi.write"),
-          };
-
-        public static IEnumerable<ApiResource> ApiResources => new[]
-        {
-      new ApiResource("weatherapi")
-      {
-        Scopes = new List<string> {"weatherapi.read", "weatherapi.write"},
-        ApiSecrets = new List<Secret> {new Secret("ScopeSecret".Sha256())},
-        UserClaims = new List<string> {"role"}
-      }
-    };
-
-        public static IEnumerable<Client> Clients =>
-          new[]
-          {
-        // m2m client credentials flow client
-        new Client
-        {
-          ClientId = "m2m.client",
-          ClientName = "Client Credentials Client",
-
-          AllowedGrantTypes = GrantTypes.ClientCredentials,
-          ClientSecrets = {new Secret("SuperSecretPassword".Sha256())},
-
-          AllowedScopes = {"weatherapi.read", "weatherapi.write"}
-        },
-
-        // interactive client using code flow + pkce
-        new Client
-        {
-          ClientId = "interactive",
-          ClientSecrets = {new Secret("SuperSecretPassword".Sha256())},
-
-          AllowedGrantTypes = GrantTypes.Code,
-
-          RedirectUris = {"https://localhost:5444/signin-oidc"},
-          FrontChannelLogoutUri = "https://localhost:5444/signout-oidc",
-          PostLogoutRedirectUris = {"https://localhost:5444/signout-callback-oidc"},
-
-          AllowOfflineAccess = true,
-          AllowedScopes = {"openid", "profile", "weatherapi.read"},
-          RequirePkce = true,
-          RequireConsent = true,
-          AllowPlainTextPkce = false
-        },
-          };
     }
 }

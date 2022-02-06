@@ -1,14 +1,17 @@
 using IdentityServerAuthentication;
+using IdentityServerAuthentication.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var identitySettings = builder.Configuration.GetSection(nameof(IdentityServerSettings)).Get<IdentityServerSettings>();
+var config = new Config(identitySettings);
 builder.Services
        .AddIdentityServer()
-       .AddInMemoryClients(Config.Clients)
-       .AddInMemoryIdentityResources(Config.IdentityResources)
-       .AddInMemoryApiResources(Config.ApiResources)
-       .AddInMemoryApiScopes(Config.ApiScopes)
-       .AddTestUsers(Config.Users)
+       .AddInMemoryClients(config.GetClients())
+       .AddInMemoryIdentityResources(config.IdentityResources)
+       .AddInMemoryApiResources(config.ApiResources)
+       .AddInMemoryApiScopes(config.ApiScopes)
+       .AddTestUsers(config.Users)
        .AddDeveloperSigningCredential();
 
 builder.Services.AddControllersWithViews();

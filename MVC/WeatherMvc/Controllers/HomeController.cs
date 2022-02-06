@@ -33,6 +33,8 @@ namespace WeatherMvc.Controllers
             return View();
         }
 
+        public IActionResult Logout() => SignOut("cookie", "oidc");
+
         public async Task<IActionResult> Weather()
         {
             using var client = new HttpClient();
